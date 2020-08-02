@@ -4,17 +4,18 @@
 int main(void)
 {
 	// Switch: Physical pin 31, BCM GPIO6, and WiringPi pin 22.
-	const int button = 22;
+	const int pin = 22;
 
 	wiringPiSetup();
 
-	pinMode(button, INPUT);
+	pinMode(pin, INPUT);
+	pullUpDnControl(pin, PUD_DOWN);
 
 	while (1) {
-		if (digitalRead(button) == LOW) {
-			fprintf(stderr, "Switch is pressed\n");
+		if (digitalRead(pin) == LOW) {
+			fprintf(stderr, "Pin is LOW\n");
 		} else {
-			fprintf(stderr, "Switch is released\n");
+			fprintf(stderr, "Pin is HIGH\n");
 		}
 		delay(500);
 	}
