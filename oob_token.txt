@@ -1,0 +1,20 @@
+SPC token encoded:
+
+eyJhbGciOiJFUzI1NiIsImlzc3VlciI6IlNpZ25hbFdpcmUgU1RJLVBBIFRlc3QiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJwYS5zaGFrZW4uc2lnbmFsd2lyZS5jb20vcGEucGVtIn0.eyJub3RBZnRlciI6IjEgeWVhciBmcm9tIG5vdyIsIm5vdEJlZm9yZSI6InRvZGF5Iiwic3BjIjoiMiIsInR5cGUiOiJzcGMtdG9rZW4ifQ.IeCf3_kHGYkRT8HyuaqtEvjR0_a7lyMeIdU8BwOqD5H7eDjY7PYeMtF5D7nNVD5ABIcK_TadbP8-ecW7mAxqpA
+
+SPC token decoded:
+
+
+{
+    "alg": "ES256",
+    "issuer": "SignalWire STI-PA Test",
+    "typ": "JWT",
+    "x5u": "pa.shaken.signalwire.com/pa.pem"
+}
+.
+{
+    "notAfter": "1 year from now",
+    "notBefore": "today",
+    "spc": "2",
+    "type": "spc-token"
+}

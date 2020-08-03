@@ -17,6 +17,8 @@
 
 #include <sys/resource.h>
 
+#define SPOOFED_CALL_DEMO 0
+
 
 stir_shaken_context_t ss = { 0 };
 const char *error_description = NULL;
@@ -51,9 +53,15 @@ fail:
 static void do_shaken(void)
 {
     char *s = NULL, *passport_encoded = NULL;
+	int n = 0;
 	stir_shaken_passport_t passport = { 0 };
     stir_shaken_passport_params_t params = { .x5u = "shaken.signalwire.com/oob/sp.pem", .attest = "A", .desttn_key = "tn", .desttn_val = "01256 533 573", .iat = time(NULL), .origtn_key = "tn", .origtn_val = "Oob Shaken", .origid = "TBD", .ppt_ignore = 1};
-	//stir_shaken_http_req_t http_req = { 0 };
+
+#if SPOOFED_CALL_DEMO
+	char origchsum[STIR_SHAKEN_BUFLEN] = { 0 };
+	char spoofed_passport[STIR_SHAKEN_BUFLEN] = { 0 };
+	char *p = NULL;
+#endif
 
 	
 	if (STIR_SHAKEN_STATUS_OK != stir_shaken_passport_init(&ss, &passport, &params, sp.keys.priv_raw, sp.keys.priv_raw_len)) {
@@ -73,29 +81,58 @@ static void do_shaken(void)
 
 	printf("Encoded PASSporT is:\n%s\n\n", passport_encoded);
 
-/**	
-	http_req.url = strdup("shaken.signalwire.com/oob/");
-	http_req.remote_port = 80;
+#if SPOOFED_CALL_DEMO
 
-	if (STIR_SHAKEN_STATUS_OK != stir_shaken_make_http_post_req(&ss, &http_req, passport_encoded, 1)) {
+	p = strchr(passport_encoded, '.');
+	p = strchr(p + 1, '.');
+	p++;
+	strcpy(origchsum, p);
+	printf("Original checksum is: %s\n", origchsum);
+	stir_shaken_free_jwt_str(passport_encoded);
+	passport_encoded = NULL;
+
+
+	printf("\n+++ SPOOFING CallerID!\n\n");
+	if (jwt_del_grants(passport.jwt, "orig") != 0) {
+		printf("Oops. SPOOFING failed to remove 'orig' grant\n");
 		goto fail;
 	}
-
-	printf("HTTP result: %ld\n", http_req.response.code);
-
-	if (http_req.response.code != 200 && http_req.response.code != 201) {
+	if (jwt_add_grant(passport.jwt, "orig", "{\"tn\":\"Eric Clapton\"}") != 0) {
+		printf("Oops. SPOOFING failed to add fake 'orig' grant\n");
 		goto fail;
 	}
-**/
+	s = stir_shaken_passport_dump_str(&passport, 1);
+	printf("SPOOFED PASSporT is:\n%s\n", s);
+	jwt_free_str(s); s = NULL;
 
-	if (tcp_send(passport_encoded, strlen(passport_encoded)) != 0) {
+	s = jwt_encode_str(passport.jwt);
+	printf("SPOOFED PASSporT properly encoeded is:\n%s\n", s);
+
+	printf("\nNow making result PASSporT by joining SPOOFED headers and grants (encoded) with previous (original) checksum...\n");
+	strcpy(spoofed_passport, s);
+	p = strchr(spoofed_passport, '.');
+	p = strchr(p + 1, '.');
+	p++;
+	strcpy(p, origchsum);
+	p = NULL;
+
+	printf("\nSPOOFED PASSporT badly encoeded (result) is:\n%s\n\n", spoofed_passport);
+
+	passport_encoded = &spoofed_passport[0];
+	s = NULL;
+#endif
+
+	if ((n = tcp_send(passport_encoded, strlen(passport_encoded))) <= 0) {
 		printf("Failed to send PASSporT\n");
 		goto fail;
 	}
 
-	printf("PASSporT sent...\n");
+	printf("PASSporT sent (%d bytes)...\n", n);
 
+#if SPOOFED_CALL_DEMO
+#else
 	stir_shaken_free_jwt_str(passport_encoded);
+#endif
 	//stir_shaken_destroy_http_request(&http_req);
 	return;
 	
@@ -109,11 +146,12 @@ int		sockfd;
 struct sockaddr_in	servaddr;
 #define SERV_PORT 9877
 //#define SERVER_ADDRESS "shaken.signalwire.com"
-#define SERVER_ADDRESS "190.102.98.199"
+#define SERVER_ADDRESS "3.8.193.142"
 
 int tcp_init(void)
 {
 
+	printf("TCP: creating socket...\n");
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("TCP: Cannot connect init socket\n");
 		return -1;
@@ -122,11 +160,14 @@ int tcp_init(void)
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons( SERV_PORT);
+
+	printf("TCP: inet_pton......\n");
 	if (inet_pton(AF_INET, SERVER_ADDRESS, &servaddr.sin_addr) <= 0) {
 		printf("TCP: Cannot assign server address for the socket\n");
 		return -1;
 	}
 
+	printf("TCP: connecting socket...\n");
 	if(connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
 		printf("TCP: Cannot connect to server\n");
 		return -1;
@@ -153,7 +194,7 @@ int tcp_send(char *data, int datalen)
 		nleft -= nwritten;
 		ptr   += nwritten;
 	}
-	return 0;
+	return datalen;
 }
 
 int main(void)
@@ -179,16 +220,16 @@ int main(void)
 
 	printf("\nReady...\n\n");
 	while (1) {
-		if (digitalRead(pin) == LOW) {
+		if (digitalRead(pin) == HIGH) {
 
-			fprintf(stderr, "Pin is LOW\n");
+			fprintf(stderr, "\n\nAuthenticating outgoing call...\n\n");
 
 			do_shaken();
-			printf("\nCaller authenticated.\n");
+			printf("\n\nCaller authenticated.\n\n");
 			return 0;
 
 		} else {
-			fprintf(stderr, "Pin is HIGH\n");
+			fprintf(stderr, "Waiting for the call...\n");
 		}
 		delay(500);
 	}

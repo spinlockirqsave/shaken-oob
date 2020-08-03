@@ -4,7 +4,7 @@ RElease = -O3
 INCLUDE = -I/usr/local/include
 CFLAGS = $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
 LDFLAGS = -L/usr/local/lib
-LDLIBS = -lwiringPi -lm -lcrypt -lrt -lstirshaken
+LDLIBS = -lwiringPi -lm -lcrypt -lrt -ljwt -lstirshaken
 
 shaken-oob:	main.o
 	@echo [link]
