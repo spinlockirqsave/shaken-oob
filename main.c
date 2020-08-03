@@ -64,10 +64,13 @@ static void do_shaken(void)
 #endif
 
 	
+	printf("PASSporT init...\n");
 	if (STIR_SHAKEN_STATUS_OK != stir_shaken_passport_init(&ss, &passport, &params, sp.keys.priv_raw, sp.keys.priv_raw_len)) {
+		printf("PASSporT init failed...\n");
 		goto fail;
 	}
 
+	printf("PASSporT dump...\n");
 	s = stir_shaken_passport_dump_str(&passport, 1);
 
 	printf("PASSporT is:\n%s\n", s);
@@ -199,7 +202,7 @@ int tcp_send(char *data, int datalen)
 
 int main(void)
 {
-	// Switch: Physical pin 31, BCM GPIO6, and WiringPi pin 22.
+	// Switch: Physical pin 31, BCM GPIO6, and WiringPi pin GPIO22.
 	const int pin = 22;
 
 
@@ -211,6 +214,7 @@ int main(void)
 
 	printf("Starting Shaken...\n");
 	init_shaken();
+			do_shaken();
 
 	printf("Configuring Pi GPIO...\n");
 	wiringPiSetup();
@@ -220,7 +224,7 @@ int main(void)
 
 	printf("\nReady...\n\n");
 	while (1) {
-		if (digitalRead(pin) == HIGH) {
+		if (digitalRead(pin) == LOW) {
 
 			fprintf(stderr, "\n\nAuthenticating outgoing call...\n\n");
 
