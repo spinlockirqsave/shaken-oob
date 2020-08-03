@@ -16,5 +16,5 @@ shaken-oob:	main.o
 
 clean:
 	@echo "[Clean]"
-	rm shaken-oob
+	rm shaken-oob main.o
 	rm -f $(OBJ) *~ core tags $(BINS)
